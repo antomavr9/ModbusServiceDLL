@@ -119,51 +119,61 @@ public class Tasks
 
             Channel<DataObject> dataChannel = Channel.CreateUnbounded<DataObject>();
 
-            var getDataTask1 = Task.Run(async () =>
+            var getDataTask1 = new Task(async () =>
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var returnGetObject1 = await GetAsync(extendedMachine, "City");
                     await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject1, extendedMachine, "City"));
-                    await Task.Delay(5000);
+                    await Task.Delay(1000);
                 }
             });
 
-            var getDataTask2 = Task.Run(async () =>
+            var getDataTask2 = new Task(async () =>
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var returnGetObject2 = await GetAsync(extendedMachine, "Date & Time");
                     await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject2, extendedMachine, "Date & Time"));
-                    await Task.Delay(5000);
+                    await Task.Delay(2000);
                 }
             });
 
-            var getDataTask3 = Task.Run(async () =>
+            var getDataTask3 = new Task(async () =>
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
                     var returnGetObject3 = await GetAsync(extendedMachine, "Time Zone");
                     await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject3, extendedMachine, "Time Zone"));
-                    await Task.Delay(5000);
+                    await Task.Delay(3000);
                 }
             });
 
-            var printDataTask = Task.Run(async () =>
+            var printDataTask = new Task(async () =>
             {
-                await foreach (var dataObject in dataChannel.Reader.ReadAllAsync(stoppingToken))
+                while (!stoppingToken.IsCancellationRequested)
                 {
-                    PrintDataObject(dataObject.ReturnGetObject, dataObject.ExtendedMachine!, dataObject.CommunicationTag!);
+                    await foreach (var dataObject in dataChannel.Reader.ReadAllAsync(stoppingToken))
+                    {
+                        PrintDataObject(dataObject.ReturnGetObject, dataObject.ExtendedMachine!, dataObject.CommunicationTag!);
+                        await Task.Delay(2000);
+                    }
                 }
             });
 
-            await Task.WhenAll(getDataTask1, getDataTask2, getDataTask3);
-            dataChannel.Writer.Complete();
-            await printDataTask;
+            // Write Data into the Channel
+            getDataTask1.Start();
+            getDataTask2.Start();
+            getDataTask3.Start();
 
+            // Read Data from the Channel
+            printDataTask.Start();
+
+            await Task.WhenAll(getDataTask1, getDataTask2, getDataTask3, printDataTask);
+            // dataChannel.Writer.Complete();  // Why does the Channel close, if the task has not finished yet??????
 
             #endregion
-}
+        }
     }
 
     public static ModbusMachineExtended<string, string, string,string> CreateModbusMachine(string ip, string serverType)
