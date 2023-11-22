@@ -5,6 +5,7 @@ using System.Threading.Channels;
 using Modbus.Net;
 using Modbus.Net.Modbus;
 using ModbusExtension;
+using System.Security.Cryptography.X509Certificates;
 
 namespace ModbusServiceDLL;
 
@@ -73,44 +74,94 @@ public class Tasks
 
 
             #region NewGetData
-            var getDataTask1 = new Task(async () =>
+            // var getDataTask1 = new Task(async () =>
+            // {
+            //     while (!stoppingToken.IsCancellationRequested)
+            //     {
+            //         // Console.WriteLine("Task 1, Timestamp: " + formattedTimestamp);
+            //         var returnGetObject1 = await GetAsync(extendedMachine, "City");
+            //         PrintDataObject(returnGetObject1,extendedMachine, "City");
+            //         await Task.Delay(1000);
+            //     }
+            // });
+
+            // var getDataTask2 = new Task(async () =>
+            // {
+            //     while (!stoppingToken.IsCancellationRequested)
+            //     {
+            //         // Console.WriteLine("Task 2, Timestamp: " + formattedTimestamp);
+            //         var returnGetObject2 = await GetAsync(extendedMachine, "Date & Time");
+            //         PrintDataObject(returnGetObject2,extendedMachine, "Date & Time");
+            //         await Task.Delay(3000);
+            //     }
+            // });
+
+            // var getDataTask3 = new Task(async () =>
+            // {
+            //     while (!stoppingToken.IsCancellationRequested)
+            //     {
+            //         // Console.WriteLine("Task 3, Timestamp: " + formattedTimestamp);
+            //         var returnGetObject3 = await GetAsync(extendedMachine, "Time Zone");
+            //         PrintDataObject(returnGetObject3,extendedMachine, "Time Zone");
+            //         await Task.Delay(5000);
+            //     }
+            // });
+
+            // getDataTask1.Start();
+            // getDataTask2.Start();
+            // getDataTask3.Start();
+
+            // await Task.WhenAll(getDataTask1, getDataTask2, getDataTask3);
+
+            #endregion
+
+            #region Channel
+
+            Channel<DataObject> dataChannel = Channel.CreateUnbounded<DataObject>();
+
+            var getDataTask1 = Task.Run(async () =>
             {
                 while (!stoppingToken.IsCancellationRequested)
                 {
-                    // Console.WriteLine("Task 1, Timestamp: " + formattedTimestamp);
                     var returnGetObject1 = await GetAsync(extendedMachine, "City");
-                    PrintDataObject(returnGetObject1,extendedMachine, "City");
-                    await Task.Delay(1000);
-                }
-            });
-
-            var getDataTask2 = new Task(async () =>
-            {
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    // Console.WriteLine("Task 2, Timestamp: " + formattedTimestamp);
-                    var returnGetObject2 = await GetAsync(extendedMachine, "Date & Time");
-                    PrintDataObject(returnGetObject2,extendedMachine, "Date & Time");
-                    await Task.Delay(3000);
-                }
-            });
-
-            var getDataTask3 = new Task(async () =>
-            {
-                while (!stoppingToken.IsCancellationRequested)
-                {
-                    // Console.WriteLine("Task 3, Timestamp: " + formattedTimestamp);
-                    var returnGetObject3 = await GetAsync(extendedMachine, "Time Zone");
-                    PrintDataObject(returnGetObject3,extendedMachine, "Time Zone");
+                    await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject1, extendedMachine, "City"));
                     await Task.Delay(5000);
                 }
             });
 
-            getDataTask1.Start();
-            getDataTask2.Start();
-            getDataTask3.Start();
+            var getDataTask2 = Task.Run(async () =>
+            {
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var returnGetObject2 = await GetAsync(extendedMachine, "Date & Time");
+                    await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject2, extendedMachine, "Date & Time"));
+                    await Task.Delay(5000);
+                }
+            });
+
+            var getDataTask3 = Task.Run(async () =>
+            {
+                while (!stoppingToken.IsCancellationRequested)
+                {
+                    var returnGetObject3 = await GetAsync(extendedMachine, "Time Zone");
+                    await dataChannel.Writer.WriteAsync(new DataObject(returnGetObject3, extendedMachine, "Time Zone"));
+                    await Task.Delay(5000);
+                }
+            });
+
+            var printDataTask = Task.Run(async () =>
+            {
+                await foreach (var dataObject in dataChannel.Reader.ReadAllAsync(stoppingToken))
+                {
+                    PrintDataObject(dataObject.ReturnGetObject, dataObject.ExtendedMachine!, dataObject.CommunicationTag!);
+                }
+            });
 
             await Task.WhenAll(getDataTask1, getDataTask2, getDataTask3);
+            dataChannel.Writer.Complete();
+            await printDataTask;
+
+
             #endregion
 }
     }
