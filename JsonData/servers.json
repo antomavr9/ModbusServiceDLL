@@ -1,0 +1,10 @@
+[
+    {
+        "Ip": "127.0.0.1:502",
+        "ServerType": "Huawei"
+    },
+    {
+        "Ip": "127.0.0.1:503",
+        "ServerType": "Huawei"
+    }
+]

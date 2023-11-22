@@ -1,0 +1,35 @@
+[
+  {
+    "SN": 1,
+    "Name": "Date & Time",
+    "Read/Write": "RW",
+    "DataType": "U32",
+    "Unit": "N/A",
+    "Gain": 1,
+    "Address": 40000,
+    "Quantity": 2,
+    "Range": "Epoch seconds UTC"
+  },
+  {
+    "SN": 2,
+    "Name": "City",
+    "Read/Write": "RW",
+    "DataType": "U32",
+    "Unit": "N/A",
+    "Gain": 1,
+    "Address": 40002,
+    "Quantity": 2,
+    "Range": ""
+  },
+  {
+    "SN": 3,
+    "Name": "Daylight Saving Time (DST)",
+    "Read/Write": "RW",
+    "DataType": "U16",
+    "Unit": "N/A",
+    "Gain": 1,
+    "Address": 40004,
+    "Quantity": 1,
+    "Range": "0: Disabled, 1: Enabled"
+  }
+]
